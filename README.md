@@ -9,10 +9,13 @@ pip install -r requirements.txt
 cp .env.example .env   # API 키 입력 (Phase 2 이후)
 
 python crawler.py init-db
-python crawler.py enqueue "https://example.com"
+python crawler.py enqueue "https://example.com"   # heuristic 라우팅
+python crawler.py run 1                           # queued Job 실행
+python crawler.py crawl "https://example.com"     # 등록+실행 (scrapling)
 python crawler.py status
 
 python -m pytest tests/unit/
+python -m pytest tests/smoke/   # 네트워크 필요
 ```
 
 ## 문서
@@ -22,5 +25,5 @@ python -m pytest tests/unit/
 
 ## 현재 Phase
 
-**1a 완료** — 골격, schema, SQLite, CLI  
-**다음: 1b** — policy, heuristic 라우터, scrapling 엔진
+**1b 완료** — policy, heuristic, scrapling 엔진, run/crawl CLI  
+**다음: 1c** — yt-dlp, gallery-dl, fallback

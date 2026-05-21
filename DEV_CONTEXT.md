@@ -9,9 +9,10 @@
 
 ```
 마지막 작업일: 2026-05-22
-현재 Phase: 1a 완료 → 1b 시작 전
-완료된 파일: config.py, crawler.py, requirements.txt, core/schema.py, core/storage.py, tests/unit/test_schema.py
-다음 작업: Phase 1b — policy.py, brains/heuristic.py, scrapling_engine.py
+현재 Phase: 1b 완료 → 1c 시작 전
+완료된 파일: core/policy.py, core/logger.py, core/telemetry.py, core/runner.py, core/plugin.py,
+  core/brains/heuristic.py, engines/scrapling_engine.py, crawler.py (enqueue/run/crawl)
+다음 작업: Phase 1c — ytdlp_engine, gallery_engine, fallback, browser_pool
 ```
 
 ---
@@ -111,14 +112,16 @@ RetryPolicy     # CrawlStrategy 내부
 - [x] `crawler.py` CLI 기본 구조 (`init-db`, `status`, `enqueue`)
 - [x] `requirements.txt`
 
-### Phase 1b — 단일 엔진 ← 현재 여기
-- [ ] `policy.py` — robots.txt, blacklist
-- [ ] `brains/heuristic.py` — 도메인 → 엔진 매핑
-- [ ] `engines/scrapling_engine.py` — execute() → CrawlResult
-- [ ] `logger.py` + `telemetry.py` 기본
-- [ ] `tests/smoke/test_scrapling.py`
+### Phase 1b — 단일 엔진 ✅
+- [x] `policy.py` — robots.txt, blacklist/whitelist
+- [x] `engines/scrapling_engine.py` — execute() → CrawlResult (scrapling + urllib fallback)
+- [x] `brains/heuristic.py` — 도메인 → 엔진 매핑, enqueue 라우팅
+- [x] `logger.py` + `telemetry.py` 기본
+- [x] `core/runner.py` — run_job, storage try/except
+- [x] CLI: `enqueue`, `run`, `crawl` (engine 하드코딩 제거)
+- [x] tests: unit (policy/heuristic/scrapling/runner) + smoke/test_scrapling.py
 
-### Phase 1c — 멀티 엔진
+### Phase 1c — 멀티 엔진 ← 현재 여기
 - [ ] `engines/ytdlp_engine.py`
 - [ ] `engines/gallery_engine.py`
 - [ ] fallback + CrawlJob 상태 전이

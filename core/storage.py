@@ -12,6 +12,10 @@ from typing import Iterator, Optional
 import config
 from core.schema import CrawlEvent, CrawlJob, CrawlResult, CrawlStrategy, JobState
 
+
+class StorageError(Exception):
+    """SQLite 저장소 오류."""
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS crawl_jobs (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,

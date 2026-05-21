@@ -1,3 +1,5 @@
 pydantic>=2.0,<3
 python-dotenv>=1.0,<2
 pytest>=8.0,<10
+scrapling>=0.4,<1
+# scrapling 전체 기능: pip install curl-cffi playwright && playwright install chromium

@@ -30,3 +30,8 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+
+# Policy (쉼표 구분 도메인, config.local.py에서 덮어쓰기 가능)
+BLACKLIST_DOMAINS: list[str] = []
+WHITELIST_DOMAINS: list[str] = []
+RESPECT_ROBOTS_TXT = True
