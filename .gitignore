@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 프로젝트 전용
+.env
+config.local.py
+output/
+db/*.db
+
+# OS
+.DS_Store
+Thumbs.db
