@@ -8,10 +8,10 @@
 ## 현재 상태 (매 세션 종료 시 업데이트)
 
 ```
-마지막 작업일: 2026-05-21
-현재 Phase: 1a 시작 전 (계획 완료, 구현 미착수)
-완료된 파일: 없음
-다음 작업: Phase 1a — 폴더 구조 + schema.py + config.py + SQLite 초기화
+마지막 작업일: 2026-05-22
+현재 Phase: 1a 완료 → 1b 시작 전
+완료된 파일: config.py, crawler.py, requirements.txt, core/schema.py, core/storage.py, tests/unit/test_schema.py
+다음 작업: Phase 1b — policy.py, brains/heuristic.py, scrapling_engine.py
 ```
 
 ---
@@ -103,15 +103,15 @@ RetryPolicy     # CrawlStrategy 내부
 
 ## Phase 체크리스트
 
-### Phase 1a — 골격 ← 현재 여기
-- [ ] 폴더 구조 생성
-- [ ] `config.py` (DEFAULT_FALLBACK_ENGINE, BRAIN_CONFIG 등)
-- [ ] `schema.py` (CrawlStrategy, CrawlJob, JobState, CrawlEvent, CrawlResult)
-- [ ] SQLite 초기화 (crawl_jobs, crawl_events, selector_memory, telemetry)
-- [ ] `crawler.py` CLI 기본 구조
-- [ ] `requirements.txt`
+### Phase 1a — 골격 ✅
+- [x] 폴더 구조 생성
+- [x] `config.py` (DEFAULT_FALLBACK_ENGINE, BRAIN_CONFIG 등)
+- [x] `schema.py` (CrawlStrategy, CrawlJob, JobState, CrawlEvent, CrawlResult)
+- [x] SQLite 초기화 (crawl_jobs, crawl_events, selector_memory, telemetry)
+- [x] `crawler.py` CLI 기본 구조 (`init-db`, `status`, `enqueue`)
+- [x] `requirements.txt`
 
-### Phase 1b — 단일 엔진
+### Phase 1b — 단일 엔진 ← 현재 여기
 - [ ] `policy.py` — robots.txt, blacklist
 - [ ] `brains/heuristic.py` — 도메인 → 엔진 매핑
 - [ ] `engines/scrapling_engine.py` — execute() → CrawlResult
