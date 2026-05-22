@@ -1,12 +1,14 @@
-"""휴리스틱 라우터 — URL/도메인 패턴 → 엔진 (Phase 1: 1차 라우팅만)."""
+"""휴리스틱 라우터 — URL/도메인 패턴 → 엔진 (Phase 1: 1차 라우팅)."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlparse
 
 import config
+from core.brain import LLMBrain
 from core.schema import CrawlStrategy, EngineName
 
 # (정규식, 엔진, 사유) — persona v1 도메인 규칙
@@ -52,7 +54,6 @@ def select_engine(url: str) -> RouteDecision:
 def build_strategy(url: str) -> CrawlStrategy:
     """Heuristic 기반 CrawlStrategy 생성."""
     decision = select_engine(url)
-    # Phase 1c: scrapling만 실행 가능. patchright는 Phase 2b.
     fallback = list(
         dict.fromkeys(["scrapling", config.DEFAULT_FALLBACK_ENGINE, "patchright"])
     )
@@ -60,5 +61,38 @@ def build_strategy(url: str) -> CrawlStrategy:
         engine=decision.engine,
         fallback_chain=fallback,
         reason=decision.reason,
-        telemetry_tags=["heuristic", "phase1"],
+        telemetry_tags=["heuristic"],
     )
+
+
+class HeuristicBrain(LLMBrain):
+    """AI 없는 URL 패턴 기반 Brain."""
+
+    @property
+    def name(self) -> str:
+        return "heuristic"
+
+    def is_available(self) -> bool:
+        return True
+
+    def classify(self, url: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        d = select_engine(url)
+        return {
+            "engine": d.engine,
+            "reason": d.reason,
+            "matched_rule": d.matched_rule,
+            "confidence": 0.9 if d.matched_rule else 0.6,
+        }
+
+    def plan(self, url: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        return build_strategy(url).model_dump()
+
+    def recover(self, error: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        ctx = context or {}
+        url = ctx.get("url", "")
+        strategy = build_strategy(url) if url else build_strategy("https://example.com")
+        strategy.fallback_chain = list(
+            dict.fromkeys(["scrapling", config.DEFAULT_FALLBACK_ENGINE, "patchright"])
+        )
+        strategy.reason = f"heuristic recover: {error[:120]}"
+        return strategy.model_dump()

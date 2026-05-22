@@ -9,10 +9,10 @@
 
 ```
 마지막 작업일: 2026-05-22
-현재 Phase: 1c 완료 → 2a 시작 전
-완료된 파일: engines/ytdlp_engine.py, engines/gallery_engine.py, core/browser_pool.py,
-  core/runner.py (fallback/상태전이), tests/integration/test_fallback.py
-다음 작업: Phase 2a — LLMBrain, planner, ollama, Dual-key Routing
+현재 Phase: 2a 완료 → 2b 시작 전
+완료된 파일: core/brain.py, brain_factory.py, persona.py, planner.py, router.py,
+  core/brains/ollama.py, crawler.py (plan/--planner/--capabilities)
+다음 작업: Phase 2b — patchright, browser pool, claude/openai/gemini, cascade
 ```
 
 ---
@@ -128,15 +128,16 @@ RetryPolicy     # CrawlStrategy 내부
 - [x] `browser_pool.py` 인터페이스 (MAX_CONTEXTS=5, cleanup_zombies)
 - [x] `tests/integration/test_fallback.py` + unit 테스트
 
-### Phase 2a — LLM + Planner ← 현재 여기
-- [ ] `core/brain.py` ABC
-- [ ] `brain_factory.py`
-- [ ] `persona.py` 버전 관리
-- [ ] `planner.py`
-- [ ] `brains/ollama.py`
-- [ ] router → Dual-key Routing 전환
+### Phase 2a — LLM + Planner ✅
+- [x] `core/brain.py` ABC
+- [x] `brain_factory.py`
+- [x] `persona.py` 버전 관리
+- [x] `planner.py` — heuristic → Ollama cascade (auto)
+- [x] `brains/ollama.py`
+- [x] `router.py` — Dual-key (URL → Capability → default fallback)
+- [x] CLI `plan`, `--planner`, `--capabilities`
 
-### Phase 2b — Stealth + 클라우드
+### Phase 2b — Stealth + 클라우드 ← 현재 여기
 - [ ] `engines/patchright_engine.py` + Browser Pool 구현
 - [ ] `brains/claude.py`, `openai.py`, `gemini.py`
 - [ ] 대→소 캐스케이드

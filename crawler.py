@@ -9,7 +9,7 @@ import sys
 
 import config
 from core import storage
-from core.brains import heuristic
+from core import planner
 from core.logger import get_logger, setup_logging
 from core.policy import PolicyError, default_checker
 from core.runner import RunnerError, list_runnable_engines, run_job
@@ -58,16 +58,25 @@ def cmd_status(_: argparse.Namespace) -> int:
     return 0
 
 
-def _enqueue_url(url: str) -> CrawlJob:
-    """정책 검사 + heuristic 라우팅 후 Job 저장."""
+def _enqueue_url(
+    url: str,
+    *,
+    planner_mode: planner.PlannerMode = "auto",
+    required_capabilities: list[str] | None = None,
+) -> CrawlJob:
+    """정책 검사 + planner(heuristic/ollama) + Dual-key 라우팅 후 Job 저장."""
     default_checker.check_url(url)
-    strategy = heuristic.build_strategy(url)
+    strategy, brain_used = planner.plan_for_job(
+        url,
+        mode=planner_mode,
+        required_capabilities=required_capabilities,
+    )
     job = CrawlJob(
         url=url,
         engine=strategy.engine,
         state=JobState.QUEUED,
         strategy=strategy,
-        brain_used="heuristic",
+        brain_used=brain_used,
     )
     job = storage.save_job(job)
     storage.log_event(
@@ -78,16 +87,47 @@ def _enqueue_url(url: str) -> CrawlJob:
                 "url": url,
                 "engine": strategy.engine,
                 "reason": strategy.reason,
+                "brain_used": brain_used,
+                "routing": strategy.telemetry_tags,
             },
         )
     )
     return job
 
 
+def cmd_plan(args: argparse.Namespace) -> int:
+    """전략만 생성 (DB 저장 없음)."""
+    try:
+        default_checker.check_url(args.url)
+    except PolicyError as exc:
+        print(f"Policy blocked: {exc}", file=sys.stderr)
+        return 1
+    caps = args.capabilities.split(",") if args.capabilities else None
+    if caps:
+        caps = [c.strip() for c in caps if c.strip()]
+    try:
+        strategy, brain_used = planner.plan_for_job(
+            args.url,
+            mode=args.planner,
+            required_capabilities=caps,
+        )
+    except Exception as exc:
+        print(f"Plan failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"brain={brain_used}")
+    print(f"engine={strategy.engine}")
+    print(f"reason={strategy.reason}")
+    print(f"fallback_chain={strategy.fallback_chain}")
+    print(f"required_capabilities={strategy.required_capabilities}")
+    print(strategy.model_dump_json(indent=2))
+    return 0
+
+
 def cmd_enqueue(args: argparse.Namespace) -> int:
     _ensure_db()
+    caps = _parse_capabilities(args)
     try:
-        job = _enqueue_url(args.url)
+        job = _enqueue_url(args.url, planner_mode=args.planner, required_capabilities=caps)
     except PolicyError as exc:
         print(f"Policy blocked: {exc}", file=sys.stderr)
         return 1
@@ -141,11 +181,19 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0 if job.state == JobState.COMPLETED else 1
 
 
+def _parse_capabilities(args: argparse.Namespace) -> list[str] | None:
+    raw = getattr(args, "capabilities", None)
+    if not raw:
+        return None
+    return [c.strip() for c in raw.split(",") if c.strip()]
+
+
 def cmd_crawl(args: argparse.Namespace) -> int:
-    """enqueue + run (heuristic 라우팅 + fallback)."""
+    """enqueue + run (planner + Dual-key + fallback)."""
     _ensure_db()
+    caps = _parse_capabilities(args)
     try:
-        job = _enqueue_url(args.url)
+        job = _enqueue_url(args.url, planner_mode=args.planner, required_capabilities=caps)
     except PolicyError as exc:
         print(f"Policy blocked: {exc}", file=sys.stderr)
         return 1
@@ -200,7 +248,31 @@ def build_parser() -> argparse.ArgumentParser:
     p_status = sub.add_parser("status", help="DB 상태 확인")
     p_status.set_defaults(func=cmd_status)
 
-    p_enqueue = sub.add_parser("enqueue", help="URL을 Job 큐에 등록 (heuristic 라우팅)")
+    planner_args = argparse.ArgumentParser(add_help=False)
+    planner_args.add_argument(
+        "--planner",
+        choices=("auto", "heuristic", "ollama"),
+        default="auto",
+        help="계획 방식: auto(휴리스틱+필요시 Ollama), heuristic, ollama",
+    )
+    planner_args.add_argument(
+        "--capabilities",
+        "-c",
+        default=None,
+        help="Dual-key 2차: 쉼표 구분 capability (예: video,static_html)",
+    )
+
+    p_plan = sub.add_parser("plan", help="CrawlStrategy만 생성 (저장 없음)")
+    p_plan.add_argument("url", help="대상 URL")
+    p_plan.add_argument("--planner", choices=("auto", "heuristic", "ollama"), default="auto")
+    p_plan.add_argument("--capabilities", "-c", default=None)
+    p_plan.set_defaults(func=cmd_plan)
+
+    p_enqueue = sub.add_parser(
+        "enqueue",
+        help="URL을 Job 큐에 등록 (planner + Dual-key)",
+        parents=[planner_args],
+    )
     p_enqueue.add_argument("url", help="크롤 대상 URL")
     p_enqueue.set_defaults(func=cmd_enqueue)
 
@@ -208,7 +280,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("job_id", type=int, help="Job ID")
     p_run.set_defaults(func=cmd_run)
 
-    p_crawl = sub.add_parser("crawl", help="URL 등록 후 즉시 실행 (멀티 엔진+fallback)")
+    p_crawl = sub.add_parser(
+        "crawl",
+        help="URL 등록 후 즉시 실행",
+        parents=[planner_args],
+    )
     p_crawl.add_argument("url", help="크롤 대상 URL")
     p_crawl.set_defaults(func=cmd_crawl)
 

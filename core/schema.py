@@ -89,6 +89,7 @@ class CrawlStrategy(BaseModel):
     selectors: dict = Field(default_factory=dict)
     mandatory_fields: list[str] = Field(default_factory=list)
     optional_fields: list[str] = Field(default_factory=list)
+    required_capabilities: list[str] = Field(default_factory=list)
     reason: str = ""
 
 

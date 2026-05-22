@@ -9,9 +9,11 @@ pip install -r requirements.txt
 cp .env.example .env   # API 키 입력 (Phase 2 이후)
 
 python crawler.py init-db
-python crawler.py enqueue "https://example.com"   # heuristic 라우팅
-python crawler.py run 1                           # queued Job 실행
-python crawler.py crawl "https://example.com"     # 등록+실행 (scrapling)
+python crawler.py plan "https://example.com" --planner heuristic
+python crawler.py plan "https://example.com" -c static_html --planner auto
+python crawler.py enqueue "https://example.com" --planner auto
+python crawler.py crawl "https://example.com" --planner heuristic
+python crawler.py run 1
 python crawler.py status
 
 python -m pytest tests/unit/
@@ -25,5 +27,5 @@ python -m pytest tests/smoke/   # 네트워크 필요
 
 ## 현재 Phase
 
-**1c 완료** — yt-dlp, gallery-dl, fallback, browser_pool 인터페이스  
-**다음: 2a** — LLMBrain, planner, Dual-key Routing
+**2a 완료** — LLMBrain, Ollama, planner cascade, Dual-key router  
+**다음: 2b** — patchright, 클라우드 LLM, browser pool 구현
