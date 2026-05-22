@@ -12,13 +12,12 @@ from core import storage
 from core.brains import heuristic
 from core.logger import get_logger, setup_logging
 from core.policy import PolicyError, default_checker
-from core.runner import RunnerError, run_job
+from core.runner import RunnerError, list_runnable_engines, run_job
 from core.schema import CrawlEvent, CrawlJob, JobState
 
 logger = get_logger(__name__)
 
-# Phase 1b에서 즉시 실행 가능한 엔진
-RUNNABLE_ENGINES = {"scrapling"}
+RUNNABLE_ENGINES = set(list_runnable_engines())
 
 
 def _ensure_db() -> None:
@@ -101,7 +100,7 @@ def cmd_enqueue(args: argparse.Namespace) -> int:
     print(f"  reason={job.strategy.reason}")
     if job.engine not in RUNNABLE_ENGINES:
         print(
-            f"  note: engine '{job.engine}' is routed but not runnable until Phase 1c+",
+            f"  note: engine '{job.engine}' is not runnable (available: {sorted(RUNNABLE_ENGINES)})",
             file=sys.stderr,
         )
     return 0
@@ -143,7 +142,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_crawl(args: argparse.Namespace) -> int:
-    """enqueue + run (scrapling 대상만)."""
+    """enqueue + run (heuristic 라우팅 + fallback)."""
     _ensure_db()
     try:
         job = _enqueue_url(args.url)
@@ -155,11 +154,12 @@ def cmd_crawl(args: argparse.Namespace) -> int:
         return 1
 
     print(f"Job #{job.id} queued → engine={job.engine}")
+    print(f"  fallback_chain={job.strategy.fallback_chain}")
 
     if job.engine not in RUNNABLE_ENGINES:
         print(
-            f"Cannot crawl: engine '{job.engine}' not available in Phase 1b. "
-            f"Use a general HTML URL or wait for Phase 1c.",
+            f"Cannot crawl: engine '{job.engine}' not runnable. "
+            f"Available: {sorted(RUNNABLE_ENGINES)}",
             file=sys.stderr,
         )
         return 1
@@ -173,9 +173,17 @@ def cmd_crawl(args: argparse.Namespace) -> int:
         print(f"Storage error: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Job #{job.id} finished: {job.state.value}")
-    if job.result and job.result.extracted_fields.get("title"):
-        print(f"  title={job.result.extracted_fields['title']}")
+    print(f"Job #{job.id} finished: {job.state.value} (engine={job.engine})")
+    if job.result:
+        r = job.result
+        if r.extracted_fields.get("title"):
+            print(f"  title={r.extracted_fields['title']}")
+        if r.images:
+            print(f"  images={len(r.images)} url(s)")
+        if r.videos:
+            print(f"  videos={len(r.videos)}")
+    if job.error_msg:
+        print(f"  error={job.error_msg}", file=sys.stderr)
     return 0 if job.state == JobState.COMPLETED else 1
 
 
@@ -200,7 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("job_id", type=int, help="Job ID")
     p_run.set_defaults(func=cmd_run)
 
-    p_crawl = sub.add_parser("crawl", help="URL 등록 후 즉시 실행 (scrapling)")
+    p_crawl = sub.add_parser("crawl", help="URL 등록 후 즉시 실행 (멀티 엔진+fallback)")
     p_crawl.add_argument("url", help="크롤 대상 URL")
     p_crawl.set_defaults(func=cmd_crawl)
 

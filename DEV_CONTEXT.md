@@ -9,10 +9,10 @@
 
 ```
 마지막 작업일: 2026-05-22
-현재 Phase: 1b 완료 → 1c 시작 전
-완료된 파일: core/policy.py, core/logger.py, core/telemetry.py, core/runner.py, core/plugin.py,
-  core/brains/heuristic.py, engines/scrapling_engine.py, crawler.py (enqueue/run/crawl)
-다음 작업: Phase 1c — ytdlp_engine, gallery_engine, fallback, browser_pool
+현재 Phase: 1c 완료 → 2a 시작 전
+완료된 파일: engines/ytdlp_engine.py, engines/gallery_engine.py, core/browser_pool.py,
+  core/runner.py (fallback/상태전이), tests/integration/test_fallback.py
+다음 작업: Phase 2a — LLMBrain, planner, ollama, Dual-key Routing
 ```
 
 ---
@@ -121,14 +121,14 @@ RetryPolicy     # CrawlStrategy 내부
 - [x] CLI: `enqueue`, `run`, `crawl` (engine 하드코딩 제거)
 - [x] tests: unit (policy/heuristic/scrapling/runner) + smoke/test_scrapling.py
 
-### Phase 1c — 멀티 엔진 ← 현재 여기
-- [ ] `engines/ytdlp_engine.py`
-- [ ] `engines/gallery_engine.py`
-- [ ] fallback + CrawlJob 상태 전이
-- [ ] `browser_pool.py` 인터페이스 (Hard Limit, cleanup_zombies)
-- [ ] `tests/integration/`
+### Phase 1c — 멀티 엔진 ✅
+- [x] `engines/ytdlp_engine.py` — 메타 추출 (skip_download)
+- [x] `engines/gallery_engine.py` — gallery-dl -g URL 수집
+- [x] fallback + CrawlJob 상태 전이 (FAILED→WAITING_RETRY→FALLBACK)
+- [x] `browser_pool.py` 인터페이스 (MAX_CONTEXTS=5, cleanup_zombies)
+- [x] `tests/integration/test_fallback.py` + unit 테스트
 
-### Phase 2a — LLM + Planner
+### Phase 2a — LLM + Planner ← 현재 여기
 - [ ] `core/brain.py` ABC
 - [ ] `brain_factory.py`
 - [ ] `persona.py` 버전 관리

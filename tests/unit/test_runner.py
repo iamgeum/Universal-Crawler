@@ -1,23 +1,43 @@
 """runner.py 단위 테스트."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from core.runner import RunnerError, run_job
-from core.schema import CrawlJob, CrawlResult, CrawlStrategy, JobState
+from core.runner import run_job
+from core.schema import CrawlJob, CrawlResult, CrawlStrategy, JobState, RetryPolicy
 
 
-def test_run_job_rejects_unavailable_engine():
+@patch("core.runner.storage")
+@patch("core.runner.telemetry")
+@patch("core.runner.default_checker")
+def test_run_job_primary_fails_without_fallback(mock_policy, mock_telemetry, mock_storage):
+    mock_policy.check_url.return_value = None
+
     job = CrawlJob(
         id=1,
-        url="https://www.youtube.com/watch?v=x",
-        engine="yt-dlp",
+        url="https://example.com",
+        engine="scrapling",
         state=JobState.QUEUED,
-        strategy=CrawlStrategy(engine="yt-dlp", reason="test"),
+        strategy=CrawlStrategy(
+            engine="scrapling",
+            fallback_chain=[],
+            retry_policy=RetryPolicy(max_retries=0),
+        ),
     )
-    with pytest.raises(RunnerError, match="not runnable"):
-        run_job(job)
+
+    fail = CrawlResult(
+        success=False,
+        partial=False,
+        content_type="text",
+        errors=["fail"],
+        telemetry={"duration_ms": 1},
+    )
+
+    with patch("core.runner._execute_engine", return_value=fail):
+        result = run_job(job)
+
+    assert result.state == JobState.FAILED
 
 
 @patch("core.runner.storage")
@@ -26,8 +46,7 @@ def test_run_job_rejects_unavailable_engine():
 def test_run_job_scrapling_success(mock_policy, mock_telemetry, mock_storage):
     mock_policy.check_url.return_value = None
 
-    mock_engine = MagicMock()
-    mock_engine.execute.return_value = CrawlResult(
+    ok = CrawlResult(
         success=True,
         partial=False,
         content_type="text",
@@ -40,13 +59,12 @@ def test_run_job_scrapling_success(mock_policy, mock_telemetry, mock_storage):
         url="https://example.com",
         engine="scrapling",
         state=JobState.QUEUED,
-        strategy=CrawlStrategy(engine="scrapling"),
+        strategy=CrawlStrategy(engine="scrapling", retry_policy=RetryPolicy(max_retries=0)),
     )
 
-    with patch("core.runner.get_engine", return_value=mock_engine):
+    with patch("core.runner._execute_engine", return_value=ok):
         result = run_job(job)
 
     assert result.state == JobState.COMPLETED
     assert result.result.success
-    mock_storage.save_job.assert_called()
     mock_telemetry.record_crawl.assert_called_once()

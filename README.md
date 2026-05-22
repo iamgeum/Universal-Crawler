@@ -25,5 +25,5 @@ python -m pytest tests/smoke/   # 네트워크 필요
 
 ## 현재 Phase
 
-**1b 완료** — policy, heuristic, scrapling 엔진, run/crawl CLI  
-**다음: 1c** — yt-dlp, gallery-dl, fallback
+**1c 완료** — yt-dlp, gallery-dl, fallback, browser_pool 인터페이스  
+**다음: 2a** — LLMBrain, planner, Dual-key Routing

@@ -52,8 +52,9 @@ def select_engine(url: str) -> RouteDecision:
 def build_strategy(url: str) -> CrawlStrategy:
     """Heuristic 기반 CrawlStrategy 생성."""
     decision = select_engine(url)
+    # Phase 1c: scrapling만 실행 가능. patchright는 Phase 2b.
     fallback = list(
-        dict.fromkeys([config.DEFAULT_FALLBACK_ENGINE, "patchright"])
+        dict.fromkeys(["scrapling", config.DEFAULT_FALLBACK_ENGINE, "patchright"])
     )
     return CrawlStrategy(
         engine=decision.engine,
