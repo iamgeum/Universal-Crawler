@@ -27,5 +27,11 @@ python -m pytest tests/smoke/   # 네트워크 필요
 
 ## 현재 Phase
 
-**2a 완료** — LLMBrain, Ollama, planner cascade, Dual-key router  
-**다음: 2b** — patchright, 클라우드 LLM, browser pool 구현
+**2b 완료** — patchright, browser pool, Claude/OpenAI/Gemini, 대→소 cascade  
+**다음: 3** — API Detection, Selector Memory
+
+```bash
+pip install patchright && patchright install chromium  # patchright 엔진
+# .env: ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY (클라우드 cascade)
+python crawler.py plan URL --planner cascade
+```

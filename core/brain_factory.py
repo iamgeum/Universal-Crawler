@@ -6,13 +6,36 @@ from typing import Optional
 
 import config
 from core.brain import LLMBrain
+from core.brains.claude import ClaudeBrain
+from core.brains.gemini import GeminiBrain
 from core.brains.heuristic import HeuristicBrain
 from core.brains.ollama import OllamaBrain
+from core.brains.openai import OpenAIBrain
 
-_PROVIDERS: dict[str, type[LLMBrain]] = {
+_PROVIDER_MAP: dict[str, type[LLMBrain]] = {
     "heuristic": HeuristicBrain,
     "ollama": OllamaBrain,
+    "anthropic": ClaudeBrain,
+    "claude": ClaudeBrain,
+    "openai": OpenAIBrain,
+    "gemini": GeminiBrain,
+    "google": GeminiBrain,
 }
+
+
+def _construct(provider: str, model: str) -> LLMBrain:
+    cls = _PROVIDER_MAP.get(provider)
+    if cls is None:
+        raise ValueError(f"Unsupported brain provider: {provider}")
+    if provider in ("ollama",):
+        return OllamaBrain(model=model, host=config.OLLAMA_HOST)
+    if provider in ("anthropic", "claude"):
+        return ClaudeBrain(model=model)
+    if provider == "openai":
+        return OpenAIBrain(model=model)
+    if provider in ("gemini", "google"):
+        return GeminiBrain(model=model)
+    return cls()
 
 
 def get_brain(role: Optional[str] = None) -> LLMBrain:
@@ -21,15 +44,7 @@ def get_brain(role: Optional[str] = None) -> LLMBrain:
     if role not in config.BRAIN_CONFIG:
         raise KeyError(f"Unknown brain role: {role}")
     cfg = config.BRAIN_CONFIG[role]
-    provider = cfg["provider"]
-    model = cfg.get("model", "")
-
-    cls = _PROVIDERS.get(provider)
-    if cls is None:
-        raise ValueError(f"Unsupported brain provider: {provider}")
-    if provider == "ollama":
-        return OllamaBrain(model=model, host=config.OLLAMA_HOST)
-    return cls()
+    return _construct(cfg["provider"], cfg.get("model", ""))
 
 
 def get_active_brain() -> LLMBrain:
@@ -37,4 +52,4 @@ def get_active_brain() -> LLMBrain:
 
 
 def list_providers() -> list[str]:
-    return list(_PROVIDERS.keys())
+    return sorted(_PROVIDER_MAP.keys())

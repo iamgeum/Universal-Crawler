@@ -4,4 +4,6 @@ pytest>=8.0,<10
 scrapling>=0.4,<1
 yt-dlp>=2024.1,<2026
 gallery-dl>=1.26,<2
-# scrapling 전체 기능: pip install curl-cffi playwright && playwright install chromium
+patchright>=1.49,<2
+# patchright: patchright install chromium
+# scrapling: pip install curl-cffi playwright && playwright install chromium

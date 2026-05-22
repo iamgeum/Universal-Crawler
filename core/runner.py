@@ -5,13 +5,17 @@ from __future__ import annotations
 import sqlite3
 from typing import Optional
 
-from core import storage, telemetry
+from core import cascade, storage, telemetry
 from core.logger import get_logger
 from core.policy import PolicyChecker, PolicyError, default_checker
+from core.router import apply_routing
 from core.schema import CrawlEvent, CrawlJob, CrawlResult, JobState
 from engines.gallery_engine import GalleryDlEngine
+from engines.patchright_engine import PatchrightEngine
 from engines.scrapling_engine import ScraplingEngine
 from engines.ytdlp_engine import YtdlpEngine
+
+import config
 
 logger = get_logger(__name__)
 
@@ -19,6 +23,7 @@ _ENGINE_REGISTRY = {
     "scrapling": ScraplingEngine(),
     "yt-dlp": YtdlpEngine(),
     "gallery-dl": GalleryDlEngine(),
+    "patchright": PatchrightEngine(),
 }
 
 
@@ -175,6 +180,40 @@ def run_job(
 
     if not last_result:
         raise RunnerError("No engine executed")
+
+    # 대→소: 전 엔진 실패 시 LLM recover 후 1회 추가 시도
+    if (
+        not last_result.success
+        and config.USE_CASCADE
+        and job.state == JobState.FAILED
+    ):
+        recovered, recover_brain = cascade.cascade_recover(
+            job.url,
+            job.error_msg or "unknown",
+            {"strategy": job.strategy.model_dump()},
+        )
+        if recovered and recovered.engine in _ENGINE_REGISTRY:
+            try:
+                storage.log_event(
+                    CrawlEvent(
+                        job_id=job.id,
+                        event_type="recover_planned",
+                        payload={
+                            "brain": recover_brain,
+                            "engine": recovered.engine,
+                        },
+                    )
+                )
+                job.strategy = apply_routing(job.url, recovered)
+                job.brain_used = recover_brain or job.brain_used
+                job.transition_to(JobState.WAITING_RETRY)
+                job.transition_to(JobState.FALLBACK)
+                last_result = _execute_engine(job, recovered.engine)
+                job.engine = recovered.engine
+                _apply_result(job, last_result, recovered.engine)
+                used_fallback = True
+            except (sqlite3.Error, storage.StorageError) as exc:
+                logger.warning("Recover execution storage error: %s", exc)
 
     try:
         storage.log_event(

@@ -27,7 +27,7 @@ ENGINE_CAPABILITIES: dict[str, list[str]] = {
 }
 
 # Phase 2a에서 실행 가능한 엔진 (registry와 동기)
-RUNNABLE_ENGINES = frozenset({"scrapling", "yt-dlp", "gallery-dl"})
+RUNNABLE_ENGINES = frozenset({"scrapling", "yt-dlp", "gallery-dl", "patchright"})
 
 
 @dataclass(frozen=True)
@@ -82,9 +82,7 @@ def _default_fallback() -> EngineName:
     fb: str = config.DEFAULT_FALLBACK_ENGINE
     if fb in RUNNABLE_ENGINES:
         return fb  # type: ignore[return-value]
-    if fb == "patchright":
-        logger.debug("patchright not runnable; fallback to scrapling")
-        return "scrapling"
+    logger.debug("fallback %s not runnable; using scrapling", fb)
     return "scrapling"
 
 

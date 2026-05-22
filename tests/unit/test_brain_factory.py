@@ -10,5 +10,7 @@ def test_get_executor_returns_ollama():
 
 
 def test_list_providers():
-    assert "ollama" in list_providers()
-    assert "heuristic" in list_providers()
+    providers = list_providers()
+    assert "ollama" in providers
+    assert "anthropic" in providers
+    assert "openai" in providers

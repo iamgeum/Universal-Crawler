@@ -9,10 +9,10 @@
 
 ```
 마지막 작업일: 2026-05-22
-현재 Phase: 2a 완료 → 2b 시작 전
-완료된 파일: core/brain.py, brain_factory.py, persona.py, planner.py, router.py,
-  core/brains/ollama.py, crawler.py (plan/--planner/--capabilities)
-다음 작업: Phase 2b — patchright, browser pool, claude/openai/gemini, cascade
+현재 Phase: 2b 완료 → 3 시작 전
+완료된 파일: patchright_engine, browser_pool, claude/openai/gemini brains, cascade.py,
+  runner recover, tests/regression/
+다음 작업: Phase 3 — API Detection, Selector Memory, 페르소나 v2
 ```
 
 ---
@@ -137,13 +137,14 @@ RetryPolicy     # CrawlStrategy 내부
 - [x] `router.py` — Dual-key (URL → Capability → default fallback)
 - [x] CLI `plan`, `--planner`, `--capabilities`
 
-### Phase 2b — Stealth + 클라우드 ← 현재 여기
-- [ ] `engines/patchright_engine.py` + Browser Pool 구현
-- [ ] `brains/claude.py`, `openai.py`, `gemini.py`
-- [ ] 대→소 캐스케이드
-- [ ] `tests/regression/`
+### Phase 2b — Stealth + 클라우드 ✅
+- [x] `engines/patchright_engine.py` + Browser Pool (urllib fallback)
+- [x] `brains/claude.py`, `openai.py`, `gemini.py`
+- [x] `core/cascade.py` — plan/recover 대→소 캐스케이드
+- [x] runner LLM recover + patchright registry
+- [x] `tests/regression/test_anti_bot_stub.py`
 
-### Phase 3 — AI 고도화
+### Phase 3 — AI 고도화 ← 현재 여기
 - [ ] API Detection (XHR/GraphQL)
 - [ ] Selector Memory 활성화
 - [ ] 페르소나 v2 A/B 비교

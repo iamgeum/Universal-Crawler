@@ -251,9 +251,9 @@ def build_parser() -> argparse.ArgumentParser:
     planner_args = argparse.ArgumentParser(add_help=False)
     planner_args.add_argument(
         "--planner",
-        choices=("auto", "heuristic", "ollama"),
+        choices=("auto", "heuristic", "ollama", "cascade"),
         default="auto",
-        help="계획 방식: auto(휴리스틱+필요시 Ollama), heuristic, ollama",
+        help="auto=캐스케이드(휴리스틱→Ollama), cascade=+클라우드소형, heuristic, ollama",
     )
     planner_args.add_argument(
         "--capabilities",
@@ -264,7 +264,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_plan = sub.add_parser("plan", help="CrawlStrategy만 생성 (저장 없음)")
     p_plan.add_argument("url", help="대상 URL")
-    p_plan.add_argument("--planner", choices=("auto", "heuristic", "ollama"), default="auto")
+    p_plan.add_argument(
+        "--planner",
+        choices=("auto", "heuristic", "ollama", "cascade"),
+        default="auto",
+    )
     p_plan.add_argument("--capabilities", "-c", default=None)
     p_plan.set_defaults(func=cmd_plan)
 

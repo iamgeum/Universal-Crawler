@@ -1,32 +1,19 @@
-"""Planning Layer — heuristic → LLM cascade → Dual-key routing."""
+"""Planning Layer — heuristic → cascade → Dual-key routing."""
 
 from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
 import config
-from core import brain_factory
+from core import cascade
 from core.brains import heuristic
 from core.logger import get_logger
 from core.router import apply_routing
 from core.schema import CrawlStrategy
-from pydantic import ValidationError
 
 logger = get_logger(__name__)
 
-PlannerMode = Literal["auto", "heuristic", "ollama"]
-
-
-def _should_use_llm(url: str, mode: PlannerMode) -> bool:
-    if mode == "heuristic":
-        return False
-    if mode == "ollama":
-        return True
-    if not config.USE_CASCADE:
-        return False
-    # auto: 휴리스틱이 확실히 매칭 못한 URL만 LLM
-    decision = heuristic.select_engine(url)
-    return decision.matched_rule is None
+PlannerMode = Literal["auto", "heuristic", "ollama", "cascade"]
 
 
 def plan(
@@ -37,25 +24,40 @@ def plan(
 ) -> tuple[CrawlStrategy, str]:
     """
     CrawlStrategy 생성 + Dual-key engine 확정.
-    Returns (strategy, brain_used).
+    auto/cascade: 대→소 cascade (heuristic → ollama → openai mini)
     """
     ctx = dict(context or {})
-    strategy = heuristic.build_strategy(url)
-    brain_used = "heuristic"
 
-    if _should_use_llm(url, mode):
-        brain = brain_factory.get_active_brain()
-        if brain.is_available() and brain.name != "heuristic":
-            try:
-                ctx["heuristic_hint"] = strategy.model_dump()
-                raw = brain.plan(url, ctx)
-                strategy = CrawlStrategy.model_validate(raw)
-                brain_used = brain.name
-                logger.info("Planner used %s for %s", brain_used, url)
-            except (ValidationError, OSError, ValueError, KeyError) as exc:
-                logger.warning("LLM plan failed (%s), keeping heuristic", exc)
+    if mode == "heuristic":
+        strategy = heuristic.build_strategy(url)
+        brain_used = "heuristic"
+    elif mode == "cascade":
+        strategy, brain_used = cascade.cascade_plan(url, ctx, full=True)
+    elif mode == "ollama":
+        strategy, brain_used = cascade.cascade_plan(url, ctx, full=False)
+        # ollama only: force executor attempt
+        from core import brain_factory
+
+        hint = heuristic.build_strategy(url)
+        brain = brain_factory.get_brain("executor")
+        if brain.is_available():
+            from core.cascade import _try_brain_plan
+
+            improved = _try_brain_plan(brain, url, ctx, hint)
+            if improved:
+                strategy, brain_used = improved, brain.name
+            else:
+                strategy = hint
         else:
-            logger.debug("LLM brain unavailable, heuristic only")
+            strategy = hint
+            brain_used = "heuristic"
+    else:
+        # auto
+        if config.USE_CASCADE:
+            strategy, brain_used = cascade.cascade_plan(url, ctx, full=False)
+        else:
+            strategy = heuristic.build_strategy(url)
+            brain_used = "heuristic"
 
     strategy = apply_routing(url, strategy)
     return strategy, brain_used

@@ -29,5 +29,5 @@ def test_default_fallback_no_capability_match():
         reason="need captcha",
     )
     r = route("https://example.com", s)
-    assert r.engine == "scrapling"
-    assert r.routing_key == "default_fallback"
+    assert r.engine == "patchright"
+    assert r.routing_key == "dual_key"

@@ -1,20 +1,33 @@
 """browser_pool.py 단위 테스트."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-from core.browser_pool import BrowserContextPool
+from core.browser_pool import BrowserContext, BrowserContextPool
 
 
-def test_max_contexts_hard_limit():
+@patch.object(BrowserContextPool, "_ensure_playwright")
+def test_max_contexts_hard_limit(mock_ensure):
+    mock_ensure.return_value = None
     pool = BrowserContextPool()
+    pool._browser = MagicMock()
+    pool._browser.new_context.return_value = MagicMock(new_page=MagicMock(return_value=MagicMock()))
+
     for i in range(5):
         pool.acquire(f"domain{i}.com")
     with pytest.raises(RuntimeError, match="MAX_CONTEXTS"):
         pool.acquire("overflow.com")
 
 
-def test_release_and_invalidate():
+@patch.object(BrowserContextPool, "_ensure_playwright")
+def test_release_and_invalidate(mock_ensure):
+    mock_ensure.return_value = None
     pool = BrowserContextPool()
+    pool._browser = MagicMock()
+    pool._browser.new_context.return_value = MagicMock(
+        new_page=MagicMock(return_value=MagicMock())
+    )
     ctx = pool.acquire("example.com")
     assert pool.active_count == 1
     pool.release("example.com", ctx)
